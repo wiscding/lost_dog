@@ -1,0 +1,48 @@
+[gd_scene load_steps=9 format=3 uid="uid://c0xm3t8ebf7rc"]
+
+[ext_resource type="Script" uid="uid://bncfjwxp78a0p" path="res://player/scripts/Player.cs" id="1_oul6g"]
+[ext_resource type="Script" uid="uid://cicngeldjximh" path="res://player/scripts/PlayerMeleeHitbox.cs" id="2_melee"]
+[ext_resource type="Resource" uid="uid://cspao4jlo8l7a" path="res://Data/CookieData.tres" id="2_yw30f"]
+[ext_resource type="Resource" uid="uid://brdcayjjne1qr" path="res://Data/BoomerangData.tres" id="3_qjkh3"]
+
+[sub_resource type="Gradient" id="Gradient_kqu6x"]
+offsets = PackedFloat32Array(0, 0.98015875, 1)
+colors = PackedColorArray(0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_oul6g"]
+gradient = SubResource("Gradient_kqu6x")
+width = 18
+height = 48
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rkbax"]
+size = Vector2(16, 46)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_melee"]
+size = Vector2(22, 20)
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_oul6g")
+CookieAbilityData = ExtResource("2_yw30f")
+BoomerangAbilityData = ExtResource("3_qjkh3")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -24)
+texture = SubResource("GradientTexture2D_oul6g")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -23)
+shape = SubResource("RectangleShape2D_rkbax")
+
+[node name="AttackPivot" type="Node2D" parent="."]
+position = Vector2(0, -22)
+
+[node name="MeleeHitbox" type="Area2D" parent="AttackPivot"]
+position = Vector2(18, 0)
+collision_layer = 64
+collision_mask = 32
+monitoring = false
+monitorable = false
+script = ExtResource("2_melee")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackPivot/MeleeHitbox"]
+shape = SubResource("RectangleShape2D_melee")

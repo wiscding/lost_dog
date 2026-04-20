@@ -1,0 +1,35 @@
+[gd_scene load_steps=7 format=3 uid="uid://b0rwaeo3jklaq"]
+
+[ext_resource type="Script" uid="uid://da53nkv0kfeh1" path="res://combat/TrainingDummy.cs" id="1_w4js7"]
+[ext_resource type="Script" uid="uid://b5ekc00immfta" path="res://combat/Hurtbox.cs" id="2_7knb0"]
+
+[sub_resource type="Gradient" id="Gradient_w4js7"]
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_7knb0"]
+gradient = SubResource("Gradient_w4js7")
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_a3bbp"]
+size = Vector2(20, 36)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_yb3ki"]
+size = Vector2(20, 33)
+
+[node name="TrainingDummy" type="StaticBody2D"]
+script = ExtResource("1_w4js7")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0.5000004, 8.940697e-07)
+scale = Vector2(0.29687497, 0.56250006)
+texture = SubResource("GradientTexture2D_7knb0")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_a3bbp")
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 32
+collision_mask = 64
+script = ExtResource("2_7knb0")
+damage_receiver_override = NodePath("..")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_yb3ki")

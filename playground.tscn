@@ -1,0 +1,34 @@
+[gd_scene load_steps=6 format=3 uid="uid://toci3q4nudeu"]
+
+[ext_resource type="PackedScene" uid="uid://c0xm3t8ebf7rc" path="res://player/player.tscn" id="1_rupst"]
+[ext_resource type="PackedScene" uid="uid://b0rwaeo3jklaq" path="res://training_dummy.tscn" id="2_wt17y"]
+
+[sub_resource type="Gradient" id="Gradient_wt17y"]
+offsets = PackedFloat32Array(0.90873015, 1)
+colors = PackedColorArray(0, 0, 0, 1, 0.00069389754, 0.00069389766, 0.0006938976, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_m8u5f"]
+gradient = SubResource("Gradient_wt17y")
+width = 32
+height = 32
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_is3ju"]
+size = Vector2(32, 32)
+
+[node name="PlayerGround" type="Node2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(235, 256)
+scale = Vector2(16, 1.09375)
+texture = SubResource("GradientTexture2D_m8u5f")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Sprite2D"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Sprite2D/StaticBody2D"]
+shape = SubResource("RectangleShape2D_is3ju")
+
+[node name="Player" parent="." instance=ExtResource("1_rupst")]
+position = Vector2(236, 202)
+
+[node name="TrainingDummy" parent="." instance=ExtResource("2_wt17y")]
+position = Vector2(353, 220)

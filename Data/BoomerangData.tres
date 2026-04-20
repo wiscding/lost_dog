@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="BoomrangData" load_steps=3 format=3 uid="uid://brdcayjjne1qr"]
+
+[ext_resource type="PackedScene" uid="uid://b4lmpsk13yej3" path="res://boomerang_projectile.tscn" id="1_1kflh"]
+[ext_resource type="Script" uid="uid://dgjo3jjml35lw" path="res://player/Abilities/BoomrangData.cs" id="1_3irww"]
+
+[resource]
+script = ExtResource("1_3irww")
+FlySpeed = 100.0
+EffectScene = ExtResource("1_1kflh")
+metadata/_custom_type_script = "uid://dgjo3jjml35lw"

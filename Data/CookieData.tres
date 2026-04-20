@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="CookieData" load_steps=2 format=3 uid="uid://cspao4jlo8l7a"]
+
+[ext_resource type="Script" uid="uid://dsdybkxvkeeot" path="res://player/Abilities/CookieData.cs" id="1_mrxgx"]
+
+[resource]
+script = ExtResource("1_mrxgx")
+metadata/_custom_type_script = "uid://dsdybkxvkeeot"
