@@ -124,6 +124,13 @@ public class AbilityManager
 				if (cfg?.RefillAtRestPoint == true)
 					cookie.CurrentUses = cookie.Data?.MaxUses ?? cookie.CurrentUses;
 			}
+
+			if (ability is HookAbility hook)
+			{
+				var cfg = hook.Data as HookData;
+				if (cfg?.RefillAtRestPoint == true && hook.Data != null && hook.Data.MaxUses > 0)
+					hook.CurrentUses = hook.Data.MaxUses;
+			}
 		}
 	}
 

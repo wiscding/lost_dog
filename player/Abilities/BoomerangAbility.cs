@@ -117,9 +117,25 @@ public partial class BoomerangAbility : IAbility
 	{
 		var x = Input.GetAxis("left", "right");
 		var y = Input.GetAxis("up", "down");
-		var dir = new Vector2(x, y);
-		if (dir.LengthSquared() > 0.0001f)
-			return dir.Normalized();
+		const float deadzone = 0.2f;
+		var left = x < -deadzone;
+		var right = x > deadzone;
+		var up = y < -deadzone;
+
+		// 五方向：上、左、右、左上、右上（与 HookAbility 一致）
+		if (up)
+		{
+			if (left)
+				return new Vector2(-0.5f, -0.8660254f);
+			if (right)
+				return new Vector2(0.5f, -0.8660254f);
+			return Vector2.Up;
+		}
+
+		if (left)
+			return Vector2.Left;
+		if (right)
+			return Vector2.Right;
 
 		// 仅按技能键时，按玩家当前朝向做水平直线发射。
 		return new Vector2(Mathf.Sign(player.FacingDirectionX == 0f ? 1f : player.FacingDirectionX), 0f);

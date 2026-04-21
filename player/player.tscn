@@ -1,9 +1,10 @@
-[gd_scene load_steps=9 format=3 uid="uid://c0xm3t8ebf7rc"]
+[gd_scene load_steps=10 format=3 uid="uid://c0xm3t8ebf7rc"]
 
 [ext_resource type="Script" uid="uid://bncfjwxp78a0p" path="res://player/scripts/Player.cs" id="1_oul6g"]
 [ext_resource type="Script" uid="uid://cicngeldjximh" path="res://player/scripts/PlayerMeleeHitbox.cs" id="2_melee"]
 [ext_resource type="Resource" uid="uid://cspao4jlo8l7a" path="res://Data/CookieData.tres" id="2_yw30f"]
 [ext_resource type="Resource" uid="uid://brdcayjjne1qr" path="res://Data/BoomerangData.tres" id="3_qjkh3"]
+[ext_resource type="Resource" path="res://Data/HookData.tres" id="4_hook"]
 
 [sub_resource type="Gradient" id="Gradient_kqu6x"]
 offsets = PackedFloat32Array(0, 0.98015875, 1)
@@ -24,6 +25,7 @@ size = Vector2(22, 20)
 script = ExtResource("1_oul6g")
 CookieAbilityData = ExtResource("2_yw30f")
 BoomerangAbilityData = ExtResource("3_qjkh3")
+HookAbilityData = ExtResource("4_hook")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(0, -24)
