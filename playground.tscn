@@ -1,7 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://toci3q4nudeu"]
+[gd_scene load_steps=10 format=3 uid="uid://toci3q4nudeu"]
 
+[ext_resource type="PackedScene" uid="uid://ole0slwytxs7" path="res://hook_anchor.tscn" id="1_m8u5f"]
 [ext_resource type="PackedScene" uid="uid://c0xm3t8ebf7rc" path="res://player/player.tscn" id="1_rupst"]
 [ext_resource type="PackedScene" uid="uid://b0rwaeo3jklaq" path="res://training_dummy.tscn" id="2_wt17y"]
+[ext_resource type="PackedScene" path="res://boomerang_pickup.tscn" id="4_boom_pickup"]
+[ext_resource type="Script" uid="uid://dmfkrexcv56rq" path="res://combat/BossAbilityDropper.cs" id="5_dropper"]
+[ext_resource type="PackedScene" path="res://hook_pickup.tscn" id="6_hook_pickup"]
 
 [sub_resource type="Gradient" id="Gradient_wt17y"]
 offsets = PackedFloat32Array(0.90873015, 1)
@@ -27,8 +31,36 @@ texture = SubResource("GradientTexture2D_m8u5f")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Sprite2D/StaticBody2D"]
 shape = SubResource("RectangleShape2D_is3ju")
 
+[node name="Sprite2D2" type="Sprite2D" parent="."]
+position = Vector2(-89, 191)
+scale = Vector2(16, 1.09375)
+texture = SubResource("GradientTexture2D_m8u5f")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Sprite2D2"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Sprite2D2/StaticBody2D"]
+shape = SubResource("RectangleShape2D_is3ju")
+
+[node name="Area2D" parent="Sprite2D2" instance=ExtResource("1_m8u5f")]
+position = Vector2(5.9375, 15.542857)
+
+[node name="Area2DTop" parent="." instance=ExtResource("1_m8u5f")]
+position = Vector2(236, 170)
+
 [node name="Player" parent="." instance=ExtResource("1_rupst")]
 position = Vector2(236, 202)
 
 [node name="TrainingDummy" parent="." instance=ExtResource("2_wt17y")]
 position = Vector2(353, 220)
+
+[node name="BoomerangPickup" parent="." instance=ExtResource("4_boom_pickup")]
+position = Vector2(176, 232)
+
+[node name="HookPickup" parent="." instance=ExtResource("6_hook_pickup")]
+position = Vector2(290, 232)
+
+[node name="CookieDropPoint" type="Marker2D" parent="."]
+position = Vector2(353, 172)
+
+[node name="BossCookieDropper" type="Node2D" parent="."]
+script = ExtResource("5_dropper")

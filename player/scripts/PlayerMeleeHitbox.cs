@@ -20,7 +20,7 @@ public partial class PlayerMeleeHitbox : Area2D
 			return;
 		}
 
-		Monitoring = false;
+		SetDeferred("monitoring", false);
 		AreaEntered += OnAreaEntered;
 		_player.Attack += OnPlayerAttack;
 	}
@@ -42,7 +42,7 @@ public partial class PlayerMeleeHitbox : Area2D
 
 		_activeLeft = Mathf.Max(0f, _activeLeft - dt);
 		if (_activeLeft <= 0f)
-			Monitoring = false;
+			SetDeferred("monitoring", false);
 	}
 
 	private void OnPlayerAttack()
@@ -52,9 +52,9 @@ public partial class PlayerMeleeHitbox : Area2D
 
 		UpdateAttackFacing();
 		_hitHurtboxIds.Clear();
-		Monitoring = true;
+		SetDeferred("monitoring", true);
 		_activeLeft = _player.AttackStateTime;
-		FlushOverlappingHurtboxes();
+		CallDeferred(nameof(FlushOverlappingHurtboxes));
 	}
 
 	private void UpdateAttackFacing()
@@ -86,6 +86,9 @@ public partial class PlayerMeleeHitbox : Area2D
 
 	private void FlushOverlappingHurtboxes()
 	{
+		if (!Monitoring)
+			return;
+
 		foreach (var area in GetOverlappingAreas())
 		{
 			if (area is Hurtbox hurt)

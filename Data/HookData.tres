@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="HookData" load_steps=2 format=3 uid="uid://6uanwm28l1ls"]
+
+[ext_resource type="Script" uid="uid://dqcibca1u83sr" path="res://player/Abilities/HookData.cs" id="1_hook"]
+
+[resource]
+script = ExtResource("1_hook")

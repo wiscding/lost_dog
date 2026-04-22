@@ -1,5 +1,4 @@
 using Godot;
-using System.Collections.Generic;
 
 /// <summary>
 /// 飞盘投掷物框架：
@@ -7,11 +6,10 @@ using System.Collections.Generic;
 /// - 回收到玩家附近后通知能力，能力再开始CD（可配置）。
 /// - 使用 Area2D 以便与 Hurtbox 交互。
 /// </summary>
-public partial class BoomerangProjectile : Area2D
+public partial class BoomerangProjectile : ProjectileBase
 {
-	private const int HurtboxLayer = 6;
 	private static readonly Vector2 CatchOffset = new(0f, -32f);
-	private const bool EnableDebugHitLog = true;
+	private static readonly bool EnableDebugHitLog = true;
 
 	private Player _owner;
 	private BoomerangAbility _ability;
@@ -27,8 +25,6 @@ public partial class BoomerangProjectile : Area2D
 	private float _spinPhase;
 	private Sprite2D _sprite;
 	private Vector2 _spriteBaseScale = Vector2.One;
-	private readonly HashSet<ulong> _damagedHurtboxIds = new();
-	private readonly Dictionary<ulong, int> _collisionCounts = new();
 
 	public void Initialize(Player owner, Vector2 direction, BoomrangData cfg, BoomerangAbility ability)
 	{
@@ -40,15 +36,16 @@ public partial class BoomerangProjectile : Area2D
 		_returnTarget = _origin;
 		_returnDir = -_dir;
 		_aliveLeft = Mathf.Max(0.1f, _cfg.MaxDuration);
+
+		// 飞盘走“穿透”模式：不因命中改变轨迹；同一目标单次投掷仅伤害一次。
+		HitBehavior = ProjectileHitBehavior.Pierce;
+		AllowRepeatedDamageOnSameTarget = false;
+		DamageHalfHearts = _ability?.GetDamageHalfHearts() ?? 1;
+		InitializeProjectile(owner, direction);
 	}
 
 	public override void _Ready()
 	{
-		// 飞盘只关心 Hurtbox，保证不与墙体碰撞。
-		CollisionLayer = 0;
-		for (var i = 1; i <= 32; i++)
-			SetCollisionMaskValue(i, i == HurtboxLayer);
-
 		_sprite = GetNodeOrNull<Sprite2D>("Sprite2D");
 		if (_sprite != null)
 			_spriteBaseScale = _sprite.Scale;
@@ -56,14 +53,14 @@ public partial class BoomerangProjectile : Area2D
 		if (EnableDebugHitLog)
 			GD.Print($"[BoomerangProjectile][生成] pos={GlobalPosition} dir={_dir}");
 
-		AreaEntered += OnAreaEntered;
+		base._Ready();
 	}
 
 	public override void _PhysicsProcess(double delta)
 	{
 		if (_owner == null || !GodotObject.IsInstanceValid(_owner))
 		{
-			QueueFree();
+			CallDeferred(Node.MethodName.QueueFree);
 			return;
 		}
 
@@ -125,40 +122,27 @@ public partial class BoomerangProjectile : Area2D
 		_sprite.Scale = new Vector2(_spriteBaseScale.X, _spriteBaseScale.Y * thicknessFactor);
 	}
 
-	private void OnAreaEntered(Area2D area)
+	protected override bool CanDamageHurtbox(Hurtbox hurtbox)
 	{
-		if (area is not Hurtbox hurt || _owner == null || _ability == null)
+		if (_owner == null || _ability == null)
+			return false;
+		if (_owner.IsAncestorOf(hurtbox))
+			return false;
+		return true;
+	}
+
+	protected override void AfterSuccessfulHit(Hurtbox hurtbox)
+	{
+		if (!EnableDebugHitLog)
 			return;
 
-		if (_owner.IsAncestorOf(hurt))
-			return;
-
-		var id = hurt.GetInstanceId();
-		_collisionCounts.TryGetValue(id, out var hitCount);
-		hitCount++;
-		_collisionCounts[id] = hitCount;
-
-		if (EnableDebugHitLog)
-		{
-			var phase = _returning ? "回程" : "去程";
-			GD.Print($"[BoomerangProjectile][碰撞] 阶段={phase} 目标={hurt.Name} 次数={hitCount}");
-		}
-
-		// 往返可发生两次碰撞，但同一目标在一次投掷内只结算一次伤害。
-		if (!_damagedHurtboxIds.Add(id))
-			return;
-
-		var damage = _ability.GetDamageHalfHearts();
-		hurt.NotifyMeleeHit(_owner, damage);
-		if (EnableDebugHitLog)
-		{
-			GD.Print($"[BoomerangProjectile][伤害] 目标={hurt.Name} 伤害(半心)={damage}");
-		}
+		var phase = _returning ? "回程" : "去程";
+		GD.Print($"[BoomerangProjectile][命中] 阶段={phase} 目标={hurtbox.Name} 伤害(半心)={DamageHalfHearts}");
 	}
 
 	private void NotifyReturnedAndFree()
 	{
 		_ability?.NotifyProjectileReturned();
-		QueueFree();
+		CallDeferred(Node.MethodName.QueueFree);
 	}
 }

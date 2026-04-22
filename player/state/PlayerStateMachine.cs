@@ -50,7 +50,10 @@ public sealed class PlayerStateMachine
 	internal float CoyoteLeft;
 	internal float JumpBufferLeft;
 
+	private bool _attackKeyHeldLastFrame;
+
 	public Player.PlayerState CurrentState { get; private set; } = Player.PlayerState.Idle;
+	public bool IsAttackLocking => AttackStateLeft > 0f;
 
 	public PlayerStateMachine(Player player)
 	{
@@ -64,6 +67,7 @@ public sealed class PlayerStateMachine
 		_states[Player.PlayerState.Crouch] = new PlayerStateCrouch();
 		_states[Player.PlayerState.Jump] = new PlayerStateJump();
 		_states[Player.PlayerState.Fall] = new PlayerStateFall();
+		_states[Player.PlayerState.Hook] = new PlayerStateHook();
 
 		ChangeState(Player.PlayerState.Idle);
 	}
@@ -82,8 +86,12 @@ public sealed class PlayerStateMachine
 		var inputX = Input.GetAxis("left", "right");
 		var moveX = Mathf.Abs(inputX) > 0.001f ? Mathf.Sign(inputX) : 0f;
 
+		var attackKeyHeld = Input.IsPhysicalKeyPressed(Key.J);
+		var attackJustPressed = attackKeyHeld && !_attackKeyHeldLastFrame;
+		_attackKeyHeldLastFrame = attackKeyHeld;
+
 		var input = new PlayerInput(
-			attackJustPressed: Input.IsActionJustPressed("attack"),
+			attackJustPressed: attackJustPressed,
 			wantCrouch: Input.IsActionPressed("squat"),
 			crouchJustPressed: Input.IsActionJustPressed("squat"),
 			jumpJustPressed: Input.IsActionJustPressed("jump"),
@@ -95,8 +103,8 @@ public sealed class PlayerStateMachine
 		if (input.JumpJustPressed)
 			JumpBufferLeft = _player.JumpBufferTime;
 
-		// attack is global (与当前运动状态无关)
-		if (input.AttackJustPressed)
+		// attack is global (与当前运动状态无关)；钩锁态禁止攻击。
+		if (input.AttackJustPressed && CurrentState != Player.PlayerState.Hook)
 			TryStartAttack();
 
 		// ---- state update

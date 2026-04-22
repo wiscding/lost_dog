@@ -27,7 +27,11 @@ public partial class Hurtbox : Area2D
 		if (_receiver == null)
 			TryResolveReceiver();
 
-		_receiver?.ReceiveMeleeHit(attacker, damageHalfHearts);
+		if (_receiver == null)
+			return;
+
+		_receiver.ReceiveMeleeHit(attacker, damageHalfHearts);
+		attacker?.OnAttackHitConfirmed();
 	}
 
 	private void TryResolveReceiver()

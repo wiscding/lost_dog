@@ -28,6 +28,7 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 		Jump = 3, // 上升阶段。  
 		Fall = 4, // 下落阶段。  
 		Attack = 5, // 攻击覆盖态（短暂）。  
+		Hook = 6, // 钩锁套索：由 HookAbility 驱动移动。  
 	}   
     
 	[ExportGroup("Movement")] // Inspector 分组：移动参数。  
@@ -63,6 +64,10 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 	[Export(PropertyHint.Range, "0,0.5,0.01")] public float AttackStateTime { get; set; } = 0.12f; // 攻击状态保持时间，默认 0.12s。  
 	/// <summary>近战单次命中伤害（半心单位：1 = ½ 心，2 = 1 心，与敌人扣血逻辑对齐）。</summary>
 	[Export(PropertyHint.Range, "1,40,1")] public int MeleeDamageHalfHearts { get; set; } = 2; // 默认 2（一整心）。  
+	[Export(PropertyHint.Range, "0,0.2,0.005")] public float HitlagDurationSeconds { get; set; } = 0.05f;
+	[Export(PropertyHint.Range, "0,1,0.01")] public float HitlagTimeScale { get; set; } = 0f;
+	[Export(PropertyHint.Range, "0,0.6,0.01")] public float DamageShakeDurationSeconds { get; set; } = 0.18f;
+	[Export(PropertyHint.Range, "0,20,0.1")] public float DamageShakeStrength { get; set; } = 7f;
   // 空行：分隔攻击与生命。  
 	[ExportGroup("Health")] // Inspector：生命 / 心数。  
 	/// <summary>最大心数（整颗心）。实际内部以半心为粒度存储。</summary>
@@ -80,10 +85,12 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 	/// <summary>受伤一次后，在多少秒内免疫后续伤害（秒，在 Inspector 的 Health 里可调；0 表示关闭无敌帧）。</summary>
 	[Export(PropertyHint.Range, "0,5,0.01")] public float HitInvulnerabilitySeconds { get; set; } = 1f;
 	[ExportGroup("Abilities")]
-	[Export] public string CookieAbilityActionName { get; set; } = "CookieAbility";
 	[Export] public CookieData CookieAbilityData { get; set; }
-	[Export] public string BoomerangAbilityActionName { get; set; } = "BoomerangAbility";
 	[Export] public BoomrangData BoomerangAbilityData { get; set; }
+	[Export] public HookData HookAbilityData { get; set; }
+	[Export] public bool StartWithCookieAbility { get; set; } = false;
+	[Export] public bool StartWithBoomerangAbility { get; set; } = false;
+	[Export] public bool StartWithHookAbility { get; set; } = false;
 
 	/// <summary>当前是否处于受击无敌时间内（可用于闪烁材质等）。</summary>
 	public bool IsHitInvulnerable => _hitInvulnRemaining > 0f;
@@ -92,11 +99,23 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 	public PlayerState CurrentState => _stateMachine?.CurrentState ?? PlayerState.Idle;
 	public PlayerStateMachine StateMachine => _stateMachine;
 	public float FacingDirectionX => _facingDirectionX;
+
+	/// <summary>非空时由钩锁能力接管本帧移动（内部使用）。</summary>
+	internal IPlayerHookDriver HookDriver { get; set; }
   
 	private PlayerStateMachine _stateMachine;
 	private AbilityManager _abilityManager;
 	private float _hitInvulnRemaining;
 	private float _facingDirectionX = 1f;
+	private bool _cookieAbilityKeyHeldLastFrame;
+	private bool _boomerangAbilityKeyHeldLastFrame;
+	private bool _hookAbilityKeyHeldLastFrame;
+	private ulong _hitlagEndAtMs;
+	private double _prevTimeScaleBeforeHitlag = 1.0;
+	private Camera2D _shakeCamera;
+	private Vector2 _shakeBaseOffset;
+	private ulong _shakeEndAtMs;
+	private float _shakeStrength;
 
 	/// <summary>子节点 _Ready 早于父节点，在此先把血量对齐到 Max，避免首帧读到 0。</summary>
 	public override void _EnterTree()
@@ -113,21 +132,34 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 		_stateMachine.Initialize();
 		var cookieData = CookieAbilityData ?? new CookieData();
 		var boomerangData = BoomerangAbilityData ?? new BoomrangData();
+		var hookData = HookAbilityData ?? new HookData();
 		_abilityManager = new AbilityManager(this, _stateMachine);
 		_abilityManager.RegisterAbility(new CookieAbility
 		{
 			Data = cookieData,
-			IsUnlocked = true,
+			IsUnlocked = StartWithCookieAbility,
 			CurrentUses = cookieData.MaxUses
 		});
 		_abilityManager.RegisterAbility(new BoomerangAbility
 		{
 			Data = boomerangData,
-			IsUnlocked = true,
+			IsUnlocked = StartWithBoomerangAbility,
 			CurrentUses = boomerangData.MaxUses
+		});
+		_abilityManager.RegisterAbility(new HookAbility
+		{
+			Data = hookData,
+			IsUnlocked = StartWithHookAbility,
+			CurrentUses = hookData.MaxUses
 		});
 		RefillHealth();
 	} // _Ready 方法体结束。  
+
+	public override void _Process(double delta)
+	{
+		UpdateHitlag();
+		UpdateCameraShake();
+	}
 
 	/// <summary>将当前血量回满并清除死亡标记（例如重生点、读档）。</summary>
 	public void RefillHealth()
@@ -144,6 +176,19 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 		RefillHealth();
 		_abilityManager?.RefillAtRestPoint();
 		GD.Print("[Player] Rest/Save refill applied.");
+	}
+
+	/// <summary>解锁指定能力；已解锁时返回 true。</summary>
+	public bool UnlockAbility(string abilityId)
+	{
+		if (string.IsNullOrEmpty(abilityId) || _abilityManager == null)
+			return false;
+
+		if (_abilityManager.IsUnlocked(abilityId))
+			return true;
+
+		_abilityManager.UnlockAbility(abilityId);
+		return _abilityManager.IsUnlocked(abilityId);
 	}
 
 	/// <summary>受到半颗心（1/2 心）伤害。</summary>
@@ -163,6 +208,7 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 
 		CurrentHalfHearts = Mathf.Max(0, CurrentHalfHearts - halfHearts);
 		EmitSignal(SignalName.HealthChanged, CurrentHalfHearts, MaxHalfHearts);
+		StartDamageShake(DamageShakeDurationSeconds, DamageShakeStrength);
 
 		if (CurrentHalfHearts <= 0)
 		{
@@ -185,19 +231,52 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 			_hitInvulnRemaining = Mathf.Max(0f, _hitInvulnRemaining - dt);
 		_stateMachine.PhysicsTick(dt);
 		_abilityManager?.Update(dt);
-		if (InputMap.HasAction(CookieAbilityActionName) && Input.IsActionJustPressed(CookieAbilityActionName))
+
+		var hookBusy = _stateMachine?.CurrentState == PlayerState.Hook;
+		var attackBusy = _stateMachine?.IsAttackLocking == true;
+		var highPriorityBusy = hookBusy || attackBusy; // 套索/咬(攻击)同优先级，启动后锁定到结束。
+		var movementBusy = _stateMachine != null
+			&& _stateMachine.CurrentState != PlayerState.Idle
+			&& _stateMachine.CurrentState != PlayerState.Attack
+			&& _stateMachine.CurrentState != PlayerState.Hook;
+
+		// 套索/咬 > 移动 > 其他：Cookie/飞盘属于“其他”，仅在高优先级空闲且非移动态时触发。
+		if (!highPriorityBusy && !movementBusy)
 		{
-			var used = _abilityManager?.TryUseAbility("cookie") == true;
-			GD.Print($"[Player] Refill key pressed: {CookieAbilityActionName}, used={used}");
+			var cookieKeyHeld = Input.IsPhysicalKeyPressed(Key.R);
+			var cookieJustPressed = cookieKeyHeld && !_cookieAbilityKeyHeldLastFrame;
+			_cookieAbilityKeyHeldLastFrame = cookieKeyHeld;
+			if (cookieJustPressed)
+			{
+				var used = _abilityManager?.TryUseAbility("cookie") == true;
+				GD.Print($"[Player] Cookie (R): used={used}");
+			}
+
+			var boomerangKeyHeld = Input.IsPhysicalKeyPressed(Key.K);
+			var boomerangJustPressed = boomerangKeyHeld && !_boomerangAbilityKeyHeldLastFrame;
+			_boomerangAbilityKeyHeldLastFrame = boomerangKeyHeld;
+			if (boomerangJustPressed)
+			{
+				var used = _abilityManager?.TryUseAbility("boomerang") == true;
+				GD.Print($"[Player] Boomerang (K): used={used}");
+			}
 		}
-		if (InputMap.HasAction(BoomerangAbilityActionName) && Input.IsActionJustPressed(BoomerangAbilityActionName))
+
+		var hookKeyHeld = Input.IsPhysicalKeyPressed(Key.F);
+		var hookJustPressed = hookKeyHeld && !_hookAbilityKeyHeldLastFrame;
+		_hookAbilityKeyHeldLastFrame = hookKeyHeld;
+		if (hookJustPressed && !highPriorityBusy)
 		{
-			var used = _abilityManager?.TryUseAbility("boomerang") == true;
-			GD.Print($"[Player] Boomerang key pressed: {BoomerangAbilityActionName}, used={used}");
+			var used = _abilityManager?.TryUseAbility("hook") == true;
+			GD.Print($"[Player] Hook (F): used={used}");
 		}
 	} // _PhysicsProcess 方法体结束。  
 
 	internal void EmitAttackSignal() => EmitSignal(SignalName.Attack);
+	internal void OnAttackHitConfirmed()
+	{
+		StartHitlag(HitlagDurationSeconds, HitlagTimeScale);
+	}
 	internal void EmitStateChangedSignal(PlayerState from, PlayerState to)
 	{
 		_abilityManager?.NotifyStateChanged(from, to);
@@ -206,6 +285,90 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 
 	public override void _ExitTree()
 	{
+		ClearHitlagIfActive();
+		ClearShakeOffset();
 		_abilityManager?.Dispose();
+	}
+
+	private void StartHitlag(float durationSeconds, float timeScale)
+	{
+		var durationMs = (ulong)Mathf.RoundToInt(Mathf.Max(0f, durationSeconds) * 1000f);
+		if (durationMs == 0)
+			return;
+
+		if (_hitlagEndAtMs == 0)
+			_prevTimeScaleBeforeHitlag = Engine.TimeScale;
+
+		Engine.TimeScale = Mathf.Clamp(timeScale, 0f, 1f);
+		var now = Time.GetTicksMsec();
+		_hitlagEndAtMs = Math.Max(_hitlagEndAtMs, now + durationMs);
+	}
+
+	private void UpdateHitlag()
+	{
+		if (_hitlagEndAtMs == 0)
+			return;
+
+		var now = Time.GetTicksMsec();
+		if (now < _hitlagEndAtMs)
+			return;
+
+		Engine.TimeScale = _prevTimeScaleBeforeHitlag <= 0f ? 1f : _prevTimeScaleBeforeHitlag;
+		_hitlagEndAtMs = 0;
+	}
+
+	private void ClearHitlagIfActive()
+	{
+		if (_hitlagEndAtMs == 0)
+			return;
+
+		Engine.TimeScale = _prevTimeScaleBeforeHitlag <= 0f ? 1f : _prevTimeScaleBeforeHitlag;
+		_hitlagEndAtMs = 0;
+	}
+
+	private void StartDamageShake(float durationSeconds, float strength)
+	{
+		var camera = GetViewport()?.GetCamera2D();
+		if (camera == null)
+			return;
+
+		if (_shakeCamera == null || _shakeCamera != camera)
+		{
+			_shakeCamera = camera;
+			_shakeBaseOffset = camera.Offset;
+		}
+
+		_shakeStrength = Mathf.Max(_shakeStrength, Mathf.Max(0f, strength));
+		var endAt = Time.GetTicksMsec() + (ulong)Mathf.RoundToInt(Mathf.Max(0f, durationSeconds) * 1000f);
+		_shakeEndAtMs = Math.Max(_shakeEndAtMs, endAt);
+	}
+
+	private void UpdateCameraShake()
+	{
+		if (_shakeCamera == null || _shakeEndAtMs == 0)
+			return;
+
+		var now = Time.GetTicksMsec();
+		if (now >= _shakeEndAtMs)
+		{
+			ClearShakeOffset();
+			return;
+		}
+
+		var t = (_shakeEndAtMs - now) / 1000f;
+		var amp = Mathf.Clamp(_shakeStrength * t * 8f, 0f, _shakeStrength);
+		var rand = new Vector2(
+			(float)GD.RandRange(-amp, amp),
+			(float)GD.RandRange(-amp, amp)
+		);
+		_shakeCamera.Offset = _shakeBaseOffset + rand;
+	}
+
+	private void ClearShakeOffset()
+	{
+		if (_shakeCamera != null)
+			_shakeCamera.Offset = _shakeBaseOffset;
+		_shakeEndAtMs = 0;
+		_shakeStrength = 0f;
 	}
 } // 类体结束。  
