@@ -1,6 +1,6 @@
 ﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "lost_dog", "lost_dog.csproj", "{46E9D895-26A1-4BCA-A281-FA0DF7B75856}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "lost_dog", "lost_dog.csproj", "{3BE78C2E-288C-4358-B901-D7A47B1AD6E1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -9,11 +9,11 @@ Global
 	ExportRelease|Any CPU = ExportRelease|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{46E9D895-26A1-4BCA-A281-FA0DF7B75856}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{46E9D895-26A1-4BCA-A281-FA0DF7B75856}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{46E9D895-26A1-4BCA-A281-FA0DF7B75856}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
-		{46E9D895-26A1-4BCA-A281-FA0DF7B75856}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
-		{46E9D895-26A1-4BCA-A281-FA0DF7B75856}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
-		{46E9D895-26A1-4BCA-A281-FA0DF7B75856}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+		{3BE78C2E-288C-4358-B901-D7A47B1AD6E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BE78C2E-288C-4358-B901-D7A47B1AD6E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BE78C2E-288C-4358-B901-D7A47B1AD6E1}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{3BE78C2E-288C-4358-B901-D7A47B1AD6E1}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{3BE78C2E-288C-4358-B901-D7A47B1AD6E1}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{3BE78C2E-288C-4358-B901-D7A47B1AD6E1}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
 	EndGlobalSection
 EndGlobal
