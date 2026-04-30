@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=3 format=3 uid="uid://jlhhxcjguhay"]
+
+[ext_resource type="PackedScene" uid="uid://c6l5jlnqx5m6j" path="res://MapBuilder/Examples/room/room_002.tscn" id="1_5qw36"]
+[ext_resource type="Script" uid="uid://c2rlk6g5v7kwr" path="res://MapBuilder/Scripts/RoomData.cs" id="1_b4hg8"]
+
+[resource]
+script = ExtResource("1_b4hg8")
+RoomId = "Room_002"
+RoomScene = ExtResource("1_5qw36")
+RoomPosition = Vector2(2000, 0)
+CameraBounds = Rect2(2000, 0, 2000, 648)
