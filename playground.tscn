@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://toci3q4nudeu"]
+[gd_scene load_steps=13 format=3 uid="uid://toci3q4nudeu"]
 
 [ext_resource type="PackedScene" uid="uid://ole0slwytxs7" path="res://hook_anchor.tscn" id="1_m8u5f"]
 [ext_resource type="PackedScene" uid="uid://c0xm3t8ebf7rc" path="res://player/player.tscn" id="1_rupst"]
@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" path="res://boomerang_pickup.tscn" id="4_boom_pickup"]
 [ext_resource type="Script" uid="uid://dmfkrexcv56rq" path="res://combat/BossAbilityDropper.cs" id="5_dropper"]
 [ext_resource type="PackedScene" path="res://hook_pickup.tscn" id="6_hook_pickup"]
+[ext_resource type="PackedScene" path="res://tooth_toy_pickup.tscn" id="7_tooth_toy"]
+[ext_resource type="PackedScene" path="res://magic_heart_pickup.tscn" id="8_magic_heart"]
+[ext_resource type="PackedScene" path="res://cookie_bag_pickup.tscn" id="9_cookie_bag"]
 
 [sub_resource type="Gradient" id="Gradient_wt17y"]
 offsets = PackedFloat32Array(0.90873015, 1)
@@ -58,6 +61,15 @@ position = Vector2(176, 232)
 
 [node name="HookPickup" parent="." instance=ExtResource("6_hook_pickup")]
 position = Vector2(290, 232)
+
+[node name="ToothToyPickup" parent="." instance=ExtResource("7_tooth_toy")]
+position = Vector2(415, 232)
+
+[node name="MagicHeartPickup" parent="." instance=ExtResource("8_magic_heart")]
+position = Vector2(236, 148)
+
+[node name="CookieBagPickupA" parent="." instance=ExtResource("9_cookie_bag")]
+position = Vector2(210, 232)
 
 [node name="CookieDropPoint" type="Marker2D" parent="."]
 position = Vector2(353, 172)

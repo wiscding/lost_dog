@@ -6,5 +6,6 @@
 [resource]
 script = ExtResource("1_3irww")
 FlySpeed = 100.0
+MaxUses = 1
 EffectScene = ExtResource("1_1kflh")
 metadata/_custom_type_script = "uid://dgjo3jjml35lw"

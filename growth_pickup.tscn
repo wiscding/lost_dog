@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://combat/GrowthPickup.cs" id="1_growth"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
+radius = 10.0
+
+[sub_resource type="Gradient" id="Gradient_pickup"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.7529412, 0.9137255, 0.32941177, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_pickup"]
+gradient = SubResource("Gradient_pickup")
+width = 20
+height = 20
+
+[node name="GrowthPickup" type="Area2D"]
+script = ExtResource("1_growth")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_pickup")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = SubResource("GradientTexture2D_pickup")

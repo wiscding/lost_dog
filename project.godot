@@ -15,10 +15,6 @@ run/main_scene="res://playground.tscn"
 config/features=PackedStringArray("4.5", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
-[autoload]
-
-MCPRuntimeBridge="*res://addons/godot_dotnet_mcp/plugin/runtime/mcp_runtime_bridge.gd"
-
 [display]
 
 window/size/viewport_width=480
@@ -33,7 +29,7 @@ project/assembly_name="lost_dog"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/godot_dotnet_mcp/plugin.cfg", "res://addons/godot_mcp/plugin.cfg")
+enabled=PackedStringArray()
 
 [input]
 

@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://growth_pickup.tscn" id="1_base"]
+
+[node name="ToothToyPickup" instance=ExtResource("1_base")]
+growth_type = "tooth_toy"
+pickup_log_label = "ToothToyPickup"
+
+[node name="Sprite2D" parent="."]
+modulate = Color(1, 0.52, 0.2, 1)

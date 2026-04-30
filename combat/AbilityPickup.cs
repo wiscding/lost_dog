@@ -15,7 +15,9 @@ public partial class AbilityPickup : Area2D
 
 	public override void _Ready()
 	{
+		ApplyRuntimeFallbackByNodeName();
 		BodyEntered += OnBodyEntered;
+		GD.Print($"[PickupDebug][{PickupLogLabel}:{Name}] ready ability={AbilityId}, consume={ConsumeOnPickup}");
 	}
 
 	private void OnBodyEntered(Node2D body)
@@ -27,5 +29,24 @@ public partial class AbilityPickup : Area2D
 		GD.Print($"[{PickupLogLabel}:{Name}] pickup ability={AbilityId}, unlocked={unlocked}");
 		if (unlocked && ConsumeOnPickup)
 			CallDeferred(Node.MethodName.QueueFree);
+	}
+
+	private void ApplyRuntimeFallbackByNodeName()
+	{
+		var nodeName = Name.ToString();
+		if (nodeName.Contains("Hook", System.StringComparison.OrdinalIgnoreCase) && AbilityId != "hook")
+		{
+			GD.PushWarning($"[AbilityPickup] auto-fix ability_id for {nodeName}: {AbilityId} -> hook");
+			AbilityId = "hook";
+			if (string.IsNullOrEmpty(PickupLogLabel) || PickupLogLabel == "AbilityPickup")
+				PickupLogLabel = "HookPickup";
+		}
+		else if (nodeName.Contains("Boomerang", System.StringComparison.OrdinalIgnoreCase) && AbilityId != "boomerang")
+		{
+			GD.PushWarning($"[AbilityPickup] auto-fix ability_id for {nodeName}: {AbilityId} -> boomerang");
+			AbilityId = "boomerang";
+			if (string.IsNullOrEmpty(PickupLogLabel) || PickupLogLabel == "AbilityPickup")
+				PickupLogLabel = "BoomerangPickup";
+		}
 	}
 }

@@ -58,7 +58,14 @@ public partial class BoomerangAbility : IAbility
 	public bool TryUse(Player player, PlayerStateMachine sm)
 	{
 		if (!CanUse(player, sm))
+		{
+			GD.Print(
+				$"[BoomerangAbility][debug] TryUse denied: " +
+				$"unlocked={IsUnlocked}, playerNull={player == null}, dead={player?.IsDead == true}, " +
+				$"activeProjectile={_activeProjectile != null}, cooldown={CooldownTimer:0.###}, " +
+				$"currentUses={CurrentUses}, maxUses={Data?.MaxUses}");
 			return false;
+		}
 
 		var cfg = Config ?? new BoomrangData();
 		var dir = ReadAimDirection(player);

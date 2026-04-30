@@ -18,6 +18,14 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 	/// <summary>血量首次降到 0 时发出（每局一次，直到 <see cref="RefillHealth"/>）。</summary>
 	[Signal]
 	public delegate void DiedEventHandler();
+
+	/// <summary>日记数量变化时发出。参数为当前日记数量。</summary>
+	[Signal]
+	public delegate void DiaryChangedEventHandler(int currentDiaryCount);
+
+	/// <summary>饼干上限变化时发出。参数为当前饼干上限。</summary>
+	[Signal]
+	public delegate void CookieCapacityChangedEventHandler(int currentCookieCapacity);
     
 	  
 	public enum PlayerState // 定义玩家状态枚举。  
@@ -63,7 +71,7 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 	[Export(PropertyHint.Range, "0.05,2.0,0.01")] public float AttackCooldown { get; set; } = 0.25f; // 攻击冷却，默认 0.25s。  
 	[Export(PropertyHint.Range, "0,0.5,0.01")] public float AttackStateTime { get; set; } = 0.12f; // 攻击状态保持时间，默认 0.12s。  
 	/// <summary>近战单次命中伤害（半心单位：1 = ½ 心，2 = 1 心，与敌人扣血逻辑对齐）。</summary>
-	[Export(PropertyHint.Range, "1,40,1")] public int MeleeDamageHalfHearts { get; set; } = 2; // 默认 2（一整心）。  
+	[Export(PropertyHint.Range, "1,40,1")] public int MeleeDamageHalfHearts { get; set; } = 5; // 默认 5（demo 初始攻击）。  
 	[Export(PropertyHint.Range, "0,0.2,0.005")] public float HitlagDurationSeconds { get; set; } = 0.05f;
 	[Export(PropertyHint.Range, "0,1,0.01")] public float HitlagTimeScale { get; set; } = 0f;
 	[Export(PropertyHint.Range, "0,0.6,0.01")] public float DamageShakeDurationSeconds { get; set; } = 0.18f;
@@ -94,6 +102,9 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 
 	/// <summary>当前是否处于受击无敌时间内（可用于闪烁材质等）。</summary>
 	public bool IsHitInvulnerable => _hitInvulnRemaining > 0f;
+
+	/// <summary>当前收集到的日记数量（可供 NPC/任务系统读取）。</summary>
+	public int DiaryCount { get; private set; }
 
   // 空行：分隔导出参数与运行时变量。  
 	public PlayerState CurrentState => _stateMachine?.CurrentState ?? PlayerState.Idle;
@@ -191,6 +202,94 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 		return _abilityManager.IsUnlocked(abilityId);
 	}
 
+	/// <summary>增加近战伤害（最小保持 1）。</summary>
+	public void AddMeleeDamage(int amount)
+	{
+		if (amount <= 0)
+			return;
+		MeleeDamageHalfHearts = Mathf.Max(1, MeleeDamageHalfHearts + amount);
+		GD.Print($"[Player] Melee damage increased: +{amount}, now={MeleeDamageHalfHearts}");
+	}
+
+	/// <summary>增加最大心数，并按新增上限补充当前血量。</summary>
+	public void AddMaxHearts(int heartsToAdd)
+	{
+		if (heartsToAdd <= 0)
+			return;
+
+		MaxHearts = Mathf.Max(1, MaxHearts + heartsToAdd);
+		CurrentHalfHearts = Mathf.Min(MaxHalfHearts, CurrentHalfHearts + heartsToAdd * 2);
+		EmitSignal(SignalName.HealthChanged, CurrentHalfHearts, MaxHalfHearts);
+		GD.Print($"[Player] Max hearts increased: +{heartsToAdd}, now={MaxHearts}");
+	}
+
+	/// <summary>增加饼干上限，并同步到当前饼干剩余次数。</summary>
+	public void AddCookieCapacity(int amount)
+	{
+		if (amount <= 0)
+			return;
+
+		var cookieAbility = _abilityManager?.GetAbility("cookie");
+		CookieData cookieData = null;
+		if (cookieAbility?.Data is CookieData abilityCookieData)
+		{
+			cookieData = abilityCookieData;
+		}
+		else
+		{
+			cookieData = CookieAbilityData;
+		}
+
+		if (cookieData != null)
+			cookieData.MaxUses = Mathf.Max(0, cookieData.MaxUses + amount);
+
+		if (cookieAbility != null)
+		{
+			cookieAbility.Data ??= cookieData;
+			cookieAbility.CurrentUses += amount;
+		}
+
+		var maxUsesNow = cookieAbility?.Data?.MaxUses ?? cookieData?.MaxUses ?? 0;
+		EmitSignal(SignalName.CookieCapacityChanged, maxUsesNow);
+		GD.Print($"[Player] Cookie capacity increased: +{amount}, now={maxUsesNow}");
+	}
+
+	/// <summary>当前饼干上限（可供外部系统读取）。</summary>
+	public int GetCookieCapacity()
+	{
+		var cookieAbility = _abilityManager?.GetAbility("cookie");
+		if (cookieAbility?.Data != null)
+			return cookieAbility.Data.MaxUses;
+		return CookieAbilityData?.MaxUses ?? 0;
+	}
+
+	/// <summary>增加日记数量（NPC/交互物可直接调用）。</summary>
+	public int AddDiary(int amount = 1)
+	{
+		if (amount <= 0)
+			return DiaryCount;
+		DiaryCount = Mathf.Max(0, DiaryCount + amount);
+		EmitSignal(SignalName.DiaryChanged, DiaryCount);
+		GD.Print($"[Player] Diary added: +{amount}, now={DiaryCount}");
+		return DiaryCount;
+	}
+
+	/// <summary>消耗日记（用于任务提交），成功返回 true。</summary>
+	public bool ConsumeDiary(int amount = 1)
+	{
+		if (amount <= 0)
+			return true;
+		if (DiaryCount < amount)
+			return false;
+		DiaryCount -= amount;
+		EmitSignal(SignalName.DiaryChanged, DiaryCount);
+		GD.Print($"[Player] Diary consumed: -{amount}, now={DiaryCount}");
+		return true;
+	}
+
+	/// <summary>读取当前日记数量（给外部脚本更直观的 API）。</summary>
+	public int GetDiaryCount() => DiaryCount;
+
 	/// <summary>受到半颗心（1/2 心）伤害。</summary>
 	public void TakeHalfHeartDamage() => ApplyHalfHeartDamage(1);
 
@@ -240,7 +339,7 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 			&& _stateMachine.CurrentState != PlayerState.Attack
 			&& _stateMachine.CurrentState != PlayerState.Hook;
 
-		// 套索/咬 > 移动 > 其他：Cookie/飞盘属于“其他”，仅在高优先级空闲且非移动态时触发。
+		// 套索/咬 > 其他：Cookie 仍限制在非移动态触发；飞盘允许移动中触发。
 		if (!highPriorityBusy && !movementBusy)
 		{
 			var cookieKeyHeld = Input.IsPhysicalKeyPressed(Key.R);
@@ -251,15 +350,19 @@ public partial class Player : CharacterBody2D // 自带 Velocity + MoveAndSlide
 				var used = _abilityManager?.TryUseAbility("cookie") == true;
 				GD.Print($"[Player] Cookie (R): used={used}");
 			}
+		}
 
-			var boomerangKeyHeld = Input.IsPhysicalKeyPressed(Key.K);
-			var boomerangJustPressed = boomerangKeyHeld && !_boomerangAbilityKeyHeldLastFrame;
-			_boomerangAbilityKeyHeldLastFrame = boomerangKeyHeld;
-			if (boomerangJustPressed)
-			{
-				var used = _abilityManager?.TryUseAbility("boomerang") == true;
-				GD.Print($"[Player] Boomerang (K): used={used}");
-			}
+		var boomerangKeyHeld = Input.IsPhysicalKeyPressed(Key.K);
+		var boomerangJustPressed = boomerangKeyHeld && !_boomerangAbilityKeyHeldLastFrame;
+		_boomerangAbilityKeyHeldLastFrame = boomerangKeyHeld;
+		if (boomerangJustPressed && !highPriorityBusy)
+		{
+			var used = _abilityManager?.TryUseAbility("boomerang") == true;
+			GD.Print($"[Player] Boomerang (K): used={used}");
+		}
+		else if (boomerangJustPressed && highPriorityBusy)
+		{
+			GD.Print($"[Player] Boomerang (K): blocked by state={_stateMachine?.CurrentState}");
 		}
 
 		var hookKeyHeld = Input.IsPhysicalKeyPressed(Key.F);
